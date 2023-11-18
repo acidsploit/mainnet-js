@@ -113,7 +113,10 @@ export class BCMR {
   // returns resolved AuthChainElement
   public static makeAuthChainElement(
     rawTx: ElectrumRawTransaction | Transaction,
-    hash: string
+    hash: string,
+    options?: {
+      ipfsGateway?: string;
+    }
   ): AuthChainElement {
     let opReturns: string[];
     let spends0thOutput = false;
@@ -174,7 +177,11 @@ export class BCMR {
       result.contentHash = binToHex(chunks[1]);
       const ipfsCid = binToUtf8(chunks[1]);
       result.uris = [`ipfs://${ipfsCid}`];
-      result.httpsUrl = `https://dweb.link/ipfs/${ipfsCid}`;
+      if (options?.ipfsGateway != undefined) {
+        result.httpsUrl = `${options.ipfsGateway}${ipfsCid}`;
+      } else {
+        result.httpsUrl = `https://dweb.link/ipfs/${ipfsCid}`;
+      }
     } else {
       // URI Publication Output
       // content hash is in OP_SHA256 byte order per spec
@@ -192,7 +199,11 @@ export class BCMR {
 
         if (uriString.indexOf("ipfs://") === 0) {
           const ipfsCid = uriString.replace("ipfs://", "");
-          result.httpsUrl = `https://dweb.link/ipfs/${ipfsCid}`;
+          if (options?.ipfsGateway != undefined) {
+            result.httpsUrl = `${options.ipfsGateway}${ipfsCid}`;
+          } else {
+            result.httpsUrl = `https://dweb.link/ipfs/${ipfsCid}`;
+          }
         } else if (uriString.indexOf("https://") === 0) {
           result.httpsUrl = uriString;
         } else if (uriString.indexOf("https://") === -1) {
@@ -408,6 +419,7 @@ export class BCMR {
     chaingraphUrl: string;
     transactionHash: string;
     network?: string;
+    ipfsGateway?: string;
   }): Promise<AuthChain> {
     if (!options.chaingraphUrl) {
       throw new Error("Provide `chaingraphUrl` param.");
@@ -481,7 +493,7 @@ export class BCMR {
       });
       const txHash = transaction.hash.replace("\\x", "");
       result.push(
-        BCMR.makeAuthChainElement(transaction as Transaction, txHash)
+        BCMR.makeAuthChainElement(transaction as Transaction, txHash, {ipfsGateway: options.ipfsGateway})
       );
     }
 
